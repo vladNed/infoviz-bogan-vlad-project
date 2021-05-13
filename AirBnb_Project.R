@@ -1,6 +1,9 @@
-install.packages("corrplot")
+#install.packages("corrplot")
 library(ggplot2)
 library(corrplot)
+library(plotly)
+library(gapminder)
+library(dplyr)
 
 # Importing the data
 nyc_path = "clean_datasets/NYC_CLEAN.csv"
@@ -30,14 +33,22 @@ ggplot(nyc_dataset, aes(x=latitude, y=longitude, color=room_type)) +
 
 ggplot(boston_dataset, aes(x=latitude, y=longitude, color=room_type)) +
   geom_point() + ggtitle('Map/room type Boston listing') +
-  scale_color_brewer
+  scale_color_brewer(palette = "Dark2")
+
+
+fig <- ggplot(nyc_dataset ,aes(x=latitude, y=longitude, color=room_type)) +
+  geom_point() + ggtitle('Map/room type Boston listing - Interactive')
+  theme_bw()
+
+fig <- ggplotly(fig)
+fig
 
 ggplot(nyc_dataset, aes(x=neighbourhood_group, fill=room_type)) +
   geom_bar()
 
 # Price 
 
-price_nyc <- nyc_dataset[nyc_dataset$price < 300]
+price_nyc <- nyc_dataset[nyc_dataset$price < 300, ]
 ggplot(price_nyc, aes(x=room_type, y=price)) + 
   geom_boxplot() + ggtitle('Price per room type NYC')
 

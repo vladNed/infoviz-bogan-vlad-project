@@ -1,0 +1,300 @@
+---
+title: "Airbnb Data Exploration"
+output: html_notebook
+---
+
+
+```{r}
+library(ggplot2)
+library(corrplot)
+library(plotly)
+library(gapminder)
+library(dplyr)
+library(randomForest)
+```
+```{r}
+# Importing the data 
+nyc_path = "clean_datasets/NYC_CLEAN.csv"
+boston_path_clean = "clean_datasets/BOSTON_CLEAN.csv"
+boston_path = "clean_datasets/boston_data.csv"
+
+nyc_dataset <- read.csv(nyc_path, header = TRUE)
+nyc_dataset <- nyc_dataset[1:3000,]
+glimpse(nyc_dataset)
+
+boston_dataset <- read.csv(boston_path_clean, header = TRUE)
+boston_dataset_numerical <- read.csv(boston_path, header = TRUE)
+```
+```{r}
+# Room type counts
+
+all <- rbind(data.frame(fill = "NYC", room_types= nyc_dataset$room_type),
+             data.frame(fill = "Boston", room_types= boston_dataset$room_type))
+
+ggplot(nyc_dataset, aes(x = room_type,  fill = room_type)) + 
+  geom_bar() + ggtitle('Room count NYC listing')
+
+ggplot(boston_dataset, aes(x = room_type, fill = room_type)) + 
+  geom_bar() + ggtitle('Room count Boston listing')
+
+ggplot(all, aes(x = room_types, fill = fill)) + 
+  geom_bar() + ggtitle('Room count Boston listing')
+
+ggplot(nyc_dataset, aes(x=latitude, y=longitude, color=room_type)) +
+  geom_point() + ggtitle('Map/room type NYC listing') +
+  scale_color_brewer(palette = "Dark2")
+
+ggplot(boston_dataset, aes(x=latitude, y=longitude, color=room_type)) +
+  geom_point() + ggtitle('Map/room type Boston listing') +
+  scale_color_brewer(palette = "Dark2")
+
+ggplot(nyc_dataset, aes(x=neighbourhood_group, fill=room_type)) +
+  geom_bar() + ggtitle("Neighbourhood Group with Room Type") +
+  scale_color_brewer(palette = "Dark2")
+
+# Price - NYC
+
+nyc_dataset[which(nyc_dataset$price < 300),]
+
+price_nyc <- nyc_dataset[nyc_dataset$price < 300,]
+
+ggplot(price_nyc, aes(x=room_type, y=price)) +
+  geom_boxplot() + ggtitle('Price per room type NYC')
+
+ggplot(nyc_dataset, aes(x=latitude, y = longitude)) +
+  geom_point() + ggtitle('Map of the NYC listings')
+
+ggplot(price_nyc, aes(x=latitude, y=longitude, color=price)) +
+  geom_point() + ggtitle('Map by price NYC listing')
+
+# Number of reviews per price - NYC
+
+ggplot(price_nyc, aes(x=number_of_reviews, y=price, color=neighbourhood_group)) +
+  geom_point(alpha=.5) +
+  scale_color_brewer(palette = 'Dark2')
+
+min_night_vs_price <- subset(nyc_dataset, minimum_nights < 30 & price < 300)
+
+ggplot(min_night_vs_price, aes(x=minimum_nights, y=price, color=room_type)) +
+  geom_point(alpha=.1) +
+  scale_color_brewer(palette = 'Dark2')
+```
+
+
+```{r}
+# Cleveland plot - NYC
+
+ggplot(price_nyc, aes(x = price, y = neighbourhood_group)) +
+  geom_segment(aes(yend = neighbourhood_group), xend = 0, colour = "grey50") +
+  geom_point(size = 3, aes(colour = room_type)) +
+  scale_colour_brewer(palette = "Set1", limits = c("Private room", "Entire home/apt", "Shared room")) +
+  theme_bw() +
+  theme(
+    panel.grid.major.y = element_blank(),   
+    legend.position = c(1, 0.55),           
+    legend.justification = c(1, 0.5)
+  )
+
+ggplot(price_nyc, aes(x = number_of_reviews, y = neighbourhood_group)) +
+  geom_segment(aes(yend = neighbourhood_group), xend = 0, colour = "grey50") +
+  geom_point(size = 3, aes(colour = room_type)) +
+  scale_colour_brewer(palette = "Set1", limits = c("Private room", "Entire home/apt", "Shared room")) +
+  theme_bw() +
+  theme(
+    panel.grid.major.y = element_blank(),   
+    legend.position = c(1, 0.55),           
+    legend.justification = c(1, 0.5)
+  )
+
+ggplot(price_nyc, aes(x = reorder(neighbourhood_group, minimum_nights), y = minimum_nights)) +
+  geom_point(size = 3) +  
+  theme_bw() +
+  theme(
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    panel.grid.major.x = element_line(colour = "grey60", linetype = "dashed"),
+    axis.text.x = element_text(angle = 60, hjust = 1)
+  )
+
+# Cleveland plot - BOSTON
+
+ggplot(boston_dataset, aes(x = price, y = neighbourhood_cleansed)) +
+  geom_segment(aes(yend = neighbourhood_cleansed), xend = 0, colour = "grey50") +
+  geom_point(size = 3, aes(colour = room_type)) +
+  scale_colour_brewer(palette = "Set1", limits = c("Private room", "Entire home/apt", "Shared room")) +
+  theme_bw() +
+  theme(
+    panel.grid.major.y = element_blank(),   
+    legend.position = c(1, 0.55),           
+    legend.justification = c(1, 0.5)
+  )
+
+ggplot(boston_dataset, aes(x = number_of_reviews, y = neighbourhood_cleansed)) +
+  geom_segment(aes(yend = neighbourhood_cleansed), xend = 0, colour = "grey50") +
+  geom_point(size = 3, aes(colour = room_type)) +
+  scale_colour_brewer(palette = "Set1", limits = c("Private room", "Entire home/apt", "Shared room")) +
+  theme_bw() +
+  theme(
+    panel.grid.major.y = element_blank(),   
+    legend.position = c(1, 0.55),           
+    legend.justification = c(1, 0.5)
+  )
+
+ggplot(boston_dataset, aes(x = reorder(neighbourhood_cleansed, minimum_nights), y = minimum_nights)) +
+  geom_point(size = 3) +  
+  theme_bw() +
+  theme(
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    panel.grid.major.x = element_line(colour = "grey60", linetype = "dashed"),
+    axis.text.x = element_text(angle = 60, hjust = 1)
+  )
+
+```
+
+
+Below is shown an interactive plot similar to the last two:
+```{r}
+fig <- ggplot(nyc_dataset ,aes(x=latitude, y=longitude, color=room_type)) +
+  geom_point(alpha = 0.2) + ggtitle('Map/room type Boston listing - Interactive')
+  scale_color_brewer(palette = "Dark2")
+
+fig <- ggplotly(fig)
+fig
+```
+```{r}
+fig <- ggplot(boston_dataset ,aes(x=latitude, y=longitude, color=room_type)) +
+  geom_point(alpha = 0.2) + ggtitle('Map/room type Boston listing - Interactive')
+  scale_color_brewer(palette = "Dark2")
+
+fig <- ggplotly(fig)
+fig
+```
+```{r}
+    
+reviews_vs_price <- nyc_dataset[nyc_dataset$number_of_reviews < 100,]
+reviews_vs_price <- nyc_dataset[nyc_dataset$price < 500,]
+
+rev_vs_price <- ggplot(reviews_vs_price, aes(x=price, y=number_of_reviews, color=room_type)) +
+    geom_point(alpha=.3)
+
+ggplotly(rev_vs_price)
+```
+
+
+```{r}
+# Violin Plot
+price_nyc <- nyc_dataset[which(nyc_dataset$price < 300),]
+
+violin <- ggplot(price_nyc, aes(x=neighbourhood_group, y=price, fill=neighbourhood_group)) +
+  geom_violin(trim=TRUE, adjust=0.8) +
+  stat_summary(geom="point", fun="median") +
+  ggtitle('Price per neighbourhood in NYC')
+
+ggplotly(violin)
+```
+
+```{r}
+
+```
+
+
+Now let's do some modeling. We are applying first Linear Regression on the NYC dataset in order to predict prices:
+```{r}
+# Linear Regression Model
+nyc_model = lm(price ~., data=nyc_dataset)
+
+# The Model summary
+summary(nyc_model)
+```
+```{r}
+# Round the summary
+
+coeffs <- summary(nyc_model)$coefficients
+coeffs <- round(coeffs, 4)
+coeffs
+```
+```{r}
+# Linear model for Boston
+
+boston_model = lm(price ~., data=boston_dataset_numerical)
+
+# The Model summary
+summary(boston_model)
+
+```
+```{r}
+# Round the summary - Boston
+
+coeffs <- summary(boston_model)$coefficients
+coeffs <- round(coeffs, 4)
+coeffs
+```
+
+
+```{r}
+# RANDOM FOREST - NYC
+# Split the data into training and test
+
+index = sample(2,nrow(nyc_dataset),replace = TRUE,prob=c(0.3,0.7))
+
+# The training data
+
+train_nyc = nyc_dataset[index==1,]
+
+# The testing data
+
+test_nyc = nyc_dataset[index==2,]
+
+# The model
+
+rfm = randomForest(price ~ latitude + longitude + neighbourhood_group_cat + minimum_nights + availability_365, data = train_nyc)
+
+# Predictions
+
+price_preds = predict(rfm, test_nyc[c("latitude", "longitude", "neighbourhood_group_cat", "minimum_nights", "availability_365")])
+
+test_nyc$price_preds = price_preds
+
+diff <- test_nyc[c("price", "price_preds")]
+diff
+
+ggplot(diff, aes(x=price, y=price_preds, color=)) + 
+  geom_point(colour = "grey60") +
+  stat_smooth(method = lm, level = 0.99, colour = "red")
+```
+```{r}
+# RANDOM FOREST - Boston
+# Split the data into training and test
+
+index = sample(2,nrow(boston_dataset_numerical),replace = TRUE,prob=c(0.3,0.7))
+
+# The training data
+
+train_boston = boston_dataset_numerical[index==1,]
+
+# The testing data
+
+test_boston = boston_dataset_numerical[index==2,]
+
+# The model
+
+train_boston <- na.omit(train_boston)
+test_boston <- na.omit(test_boston)
+rfm = randomForest(price ~ ., data = train_boston)
+
+# Predictions
+
+price_preds = predict(rfm, test_boston)
+
+test_boston$price_preds = price_preds
+
+diff <- test_boston[c("price", "price_preds")]
+diff
+
+ggplot(diff, aes(x=price, y=price_preds, color=)) + 
+  geom_point(colour = "grey60") +
+  stat_smooth(method = lm, level = 0.99, colour = "red")
+```
+
+
